@@ -326,7 +326,9 @@ function updateCartUI() {
 
   elements.cartCounter.textContent = totalItems;
   elements.cartItemsCount.textContent = totalItems;
-  elements.cartNavTotal.textContent = formatFCFA(subtotal);
+  if (elements.cartNavTotal) {
+    elements.cartNavTotal.textContent = formatFCFA(subtotal);
+  }
 
   if (state.cart.length === 0) {
     elements.cartEmptyView.style.display = 'flex';
@@ -692,30 +694,43 @@ function showToast(message) {
 function setupEventListeners() {
   // Filtres par catégorie
   elements.categoryPills.addEventListener('click', e => {
-    if (e.target.classList.contains('cat-pill')) {
+    const pill = e.target.closest('.cat-pill');
+    if (pill) {
       document.querySelectorAll('.cat-pill').forEach(btn => btn.classList.remove('active'));
-      e.target.classList.add('active');
-      state.filters.category = e.target.dataset.category;
+      pill.classList.add('active');
+      const cat = pill.dataset.category;
+      state.filters.category = cat;
+
+      // Synchroniser également l'onglet actif du menu de navigation
+      document.querySelectorAll('.nav-link[data-filter]').forEach(l => {
+        l.classList.toggle('active', l.dataset.filter === cat);
+      });
+
       fetchProducts();
     }
   });
 
-  // Liens de navigation
+  // Liens de navigation du header et du footer
   document.querySelectorAll('.nav-link[data-filter], .footer-list a[data-filter]').forEach(link => {
     link.addEventListener('click', e => {
       e.preventDefault();
       const cat = link.dataset.filter;
       state.filters.category = cat;
 
-      document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-      link.classList.add('active');
+      document.querySelectorAll('.nav-link[data-filter]').forEach(l => {
+        l.classList.toggle('active', l.dataset.filter === cat);
+      });
 
       document.querySelectorAll('.cat-pill').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.category === cat);
       });
 
       fetchProducts();
-      document.getElementById('collection').scrollIntoView({ behavior: 'smooth' });
+
+      const collSection = document.getElementById('collection');
+      if (collSection) {
+        collSection.scrollIntoView({ behavior: 'smooth' });
+      }
     });
   });
 
@@ -849,18 +864,47 @@ function setupEventListeners() {
     document.body.style.overflow = '';
   });
 
-  elements.ordersBtn.addEventListener('click', openOrdersHistory);
-  elements.closeHistoryBtn.addEventListener('click', () => {
-    elements.ordersHistoryBackdrop.classList.remove('open');
-    document.body.style.overflow = '';
-  });
+  if (elements.ordersBtn) elements.ordersBtn.addEventListener('click', openOrdersHistory);
+  if (elements.closeHistoryBtn) {
+    elements.closeHistoryBtn.addEventListener('click', () => {
+      elements.ordersHistoryBackdrop.classList.remove('open');
+      document.body.style.overflow = '';
+    });
+  }
 
   // Hero achat rapide
-  elements.heroBuyBtn.addEventListener('click', () => {
-    if (state.products.length > 0) {
-      const heroProd = state.products.find(p => p.brand === 'Berluti') || state.products[0];
-      addToCart(heroProd._id);
-    }
+  if (elements.heroBuyBtn) {
+    elements.heroBuyBtn.addEventListener('click', () => {
+      if (state.products.length > 0) {
+        const heroProd = state.products.find(p => p.brand === 'Berluti') || state.products[0];
+        addToCart(heroProd._id);
+      }
+    });
+  }
+
+  // 3D Motion effects & Card Parallax Tilt (motionsite.ai style)
+  setupMotionEffects();
+}
+
+function setupMotionEffects() {
+  const heroCard = document.getElementById('hero-card');
+  if (!heroCard) return;
+
+  // 3D Tilt interactif fluide sur le soulier réel
+  heroCard.addEventListener('mousemove', (e) => {
+    const rect = heroCard.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateX = ((y - centerY) / centerY) * -8;
+    const rotateY = ((x - centerX) / centerX) * 10;
+
+    heroCard.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+  });
+
+  heroCard.addEventListener('mouseleave', () => {
+    heroCard.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
   });
 }
 
